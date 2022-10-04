@@ -4,7 +4,7 @@ import numpy as np
 import torch
 from torch import nn
 from tqdm import tqdm
-from layers import DisentangleGraph, LocalHyperGATlayer, GlobalHyperGATlayer
+from layers import DisentangleGraph, LocalHyperGATlayer
 from torch.nn import Module, Parameter
 import torch.nn.functional as F
 import torch.sparse
