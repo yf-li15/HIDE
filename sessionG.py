@@ -46,8 +46,6 @@ class HIDE(Module):
         self.pos_embedding = nn.Embedding(200, self.dim)
 
 
-        if self.g:
-            self.global_g = GlobalHyperGATlayer(opt, adj_all, num, embedding=self.embedding)
         
         if self.disen:
             self.disenG = DisentangleGraph(dim=self.feat_latent_dim, alpha=self.opt.alpha, e=self.e) # need to be updated
