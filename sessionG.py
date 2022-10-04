@@ -28,7 +28,6 @@ class HIDE(Module):
         self.cat = cat
         self.e = opt.e
         self.disen = opt.disen
-        self.g = opt.g
         self.w_k = 10
 
         
