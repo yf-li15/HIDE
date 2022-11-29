@@ -1,7 +1,7 @@
 # HIDE
 This is the pytorch implementation of our SIGIR'22 paper:  
 
-Yinfeng Li, Chen Gao, Hengliang Luo, Depeng Jin, Yong Li, **Enhancing Hypergraph Neural Networks with Intent Disentanglement for Session-based Recommendation**, In Proceedings of the 45th International ACM SIGIR Conference on Research and Development in Information Retrieval (SIGIR'22).
+Yinfeng Li, Chen Gao, Hengliang Luo, Depeng Jin, Yong Li, [**Enhancing Hypergraph Neural Networks with Intent Disentanglement for Session-based Recommendation**](https://dl.acm.org/doi/10.1145/3477495.3531794), In Proceedings of the 45th International ACM SIGIR Conference on Research and Development in Information Retrieval (SIGIR'22).
 
 Environment: Pytorch == 1.12.1 and Python >= 3.6.8.
 
