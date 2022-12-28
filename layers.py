@@ -26,7 +26,7 @@ class DisentangleGraph(nn.Module):
         # Disentangling Hypergraph with given H and latent_feature
         self.latent_dim = dim   # Disentangled feature dim
         self.e = e              # sparsity parameters
-        self.t = t              # 1/tao
+        self.t = t              
         self.w = nn.Parameter(torch.Tensor(self.latent_dim, self.latent_dim))
         self.w1 = nn.Parameter(torch.Tensor(self.latent_dim, 1))
 
@@ -55,34 +55,26 @@ class DisentangleGraph(nn.Module):
 
         hs = h.unsqueeze(2).repeat(1, 1, k, 1)                   # (batchsize, N, num_factor, latent_dim)
 
-        '''
-        feat = int_emb * hs
-
-        sim_val = torch.sigmoid(torch.matmul(feat, self.w1).squeeze(-1))         # (Batchsize, N, num_factor) ?remove map
-        # sim_val = self.leakyrelu(torch.matmul(feat, self.w1).squeeze(-1))
-        '''
-
-      
         # CosineSimilarity 
         cos = nn.CosineSimilarity(dim=-1)
-        sim_val = self.t * cos(hs, int_emb)     # [0, 1]   # (batchsize, Node, Num_edge)
+        sim_val = self.t * cos(hs, int_emb)                      # (batchsize, Node, Num_edge)
         
         
         sim_val = sim_val * mask
         
         # sort
         _, indices = torch.sort(sim_val, dim=1, descending=True)
-        _, idx = torch.sort(indices, dim=1) # important
+        _, idx = torch.sort(indices, dim=1)
 
-        judge_vec = idx - select_k # select according to <=0
-
+        # select according to <=0
+        judge_vec = idx - select_k  
         ones_vec = 3*torch.ones_like(sim_val)
         zeros_vec = torch.zeros_like(sim_val)
+        
         # intent hyperedges
         int_H = torch.where(judge_vec <= 0, ones_vec, zeros_vec)
-  
-     
-        H_out = torch.cat([int_H, H], dim=-1) # (batchsize, N, num_edge+1) add intent hyperedge
+        # add intent hyperedge
+        H_out = torch.cat([int_H, H], dim=-1) # (batchsize, N, num_edge+1) 
         # return learned binary value
         return H_out
 
@@ -105,8 +97,7 @@ class LocalHyperGATlayer(nn.Module):
         # node->edge->node
         self.w1 = Parameter(torch.Tensor(self.dim, self.dim))
         self.w2 = Parameter(torch.Tensor(self.dim, self.dim))
-
-        # In hyperedge, Out hyperedge, sw Hyperedge   
+  
         self.a10 = nn.Parameter(torch.Tensor(size=(self.dim, 1)))   
         self.a11 = nn.Parameter(torch.Tensor(size=(self.dim, 1)))   
         self.a12 = nn.Parameter(torch.Tensor(size=(self.dim, 1)))    
@@ -132,19 +123,15 @@ class LocalHyperGATlayer(nn.Module):
         h_embs = []
 
         for i in range(self.layer):
-            edge_cluster = torch.matmul(H_adj.transpose(1,2), h_emb)       # (Batchsize, edge_num, latent_dim)
-            # h_t_cluster = torch.matmul(H_adj, edge_cluster) + s_c          #?
+            edge_cluster = torch.matmul(H_adj.transpose(1,2), h_emb)                  # (Batchsize, edge_num, latent_dim)
             h_t_cluster = h_emb + s_c
-            # h_t_cluster = torch.matmul(H_adj, edge_cluster) + s_c +  h_emb
             
             # node2edge
-            
-            edge_c_in = edge_cluster.unsqueeze(1).expand(-1, N, -1, -1)           # (Batchsize, N, edge_num, latent_dim)
-            h_4att0 = h_emb.unsqueeze(2).expand(-1, -1, edge_num, -1)             # (Batchsize, N, edge_num, latent_dim)
+            edge_c_in = edge_cluster.unsqueeze(1).expand(-1, N, -1, -1)               # (Batchsize, N, edge_num, latent_dim)
+            h_4att0 = h_emb.unsqueeze(2).expand(-1, -1, edge_num, -1)                 # (Batchsize, N, edge_num, latent_dim)
 
             feat = edge_c_in * h_4att0
 
-            
             atts10 = self.leakyrelu(torch.matmul(feat, self.a10).squeeze(-1))         # (Batchsize, N, edge_num)
             atts11 = self.leakyrelu(torch.matmul(feat, self.a11).squeeze(-1))         # (Batchsize, N, edge_num)
             atts12 = self.leakyrelu(torch.matmul(feat, self.a12).squeeze(-1))         # (Batchsize, N, edge_num)
@@ -154,33 +141,31 @@ class LocalHyperGATlayer(nn.Module):
             alpha1 = torch.where(H.eq(2), atts11, alpha1)
             alpha1 = torch.where(H.eq(3), atts12, alpha1)
 
-            alpha1 = F.softmax(alpha1, dim=1) # (Batchsize, N, edge_num)
+            alpha1 = F.softmax(alpha1, dim=1)                                         # (Batchsize, N, edge_num)
 
-            edge = torch.matmul(alpha1.transpose(1,2), h_emb) # (Batchsize, edge_num, latent_dim)
+            edge = torch.matmul(alpha1.transpose(1,2), h_emb)                         # (Batchsize, edge_num, latent_dim)
 
-            
             # edge2node
-            edge_in = edge.unsqueeze(1).expand(-1, N, -1, -1)           # (Batchsize, N, edge_num, latent_dim)
-            h_4att1 = h_t_cluster.unsqueeze(2).expand(-1, -1, edge_num, -1)  # (Batchsize, N, edge_num, latent_dim)
+            edge_in = edge.unsqueeze(1).expand(-1, N, -1, -1)                         # (Batchsize, N, edge_num, latent_dim)
+            h_4att1 = h_t_cluster.unsqueeze(2).expand(-1, -1, edge_num, -1)           # (Batchsize, N, edge_num, latent_dim)
             
             feat_e2n = edge_in * h_4att1
             
-            atts20 = self.leakyrelu(torch.matmul(feat_e2n, self.a20).squeeze(-1))         # (Batchsize, N, edge_num)
-            atts21 = self.leakyrelu(torch.matmul(feat_e2n, self.a21).squeeze(-1))         # (Batchsize, N, edge_num)
-            atts22 = self.leakyrelu(torch.matmul(feat_e2n, self.a22).squeeze(-1))         # (Batchsize, N, edge_num)
+            atts20 = self.leakyrelu(torch.matmul(feat_e2n, self.a20).squeeze(-1))     # (Batchsize, N, edge_num)
+            atts21 = self.leakyrelu(torch.matmul(feat_e2n, self.a21).squeeze(-1))     # (Batchsize, N, edge_num)
+            atts22 = self.leakyrelu(torch.matmul(feat_e2n, self.a22).squeeze(-1))     # (Batchsize, N, edge_num)
             
 
             alpha2 = torch.where(H.eq(1), atts20, zero_vec)
             alpha2 = torch.where(H.eq(2), atts21, alpha2)
             alpha2 = torch.where(H.eq(3), atts22, alpha2)
             
-            alpha2 = F.softmax(alpha2, dim=2) # (Batchsize, N, edge_num)
+            alpha2 = F.softmax(alpha2, dim=2)                                         # (Batchsize, N, edge_num)
 
-            h_emb = torch.matmul(alpha2, edge) # (Batchsize, N, latent_dim)
+            h_emb = torch.matmul(alpha2, edge)                                        # (Batchsize, N, latent_dim)
             h_embs.append(h_emb)
 
         h_embs = torch.stack(h_embs, dim=1)
-        #print(embs.size())
         h_out = torch.sum(h_embs, dim=1)
 
         return h_out
