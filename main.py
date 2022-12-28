@@ -80,7 +80,6 @@ def main():
         sw = []
         for i in range(2, opt.w+1):
             sw.append(i)
-        #sw=[2,3] # slide window
 
     elif opt.dataset == 'lastfm':
         num_node = 35231
